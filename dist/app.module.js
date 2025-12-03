@@ -23,7 +23,6 @@ const payments_module_1 = require("./payments/payments.module");
 const complaints_module_1 = require("./complaints/complaints.module");
 const notification_module_1 = require("./notifications/notification.module");
 const uploads_module_1 = require("./uploads/uploads.module");
-const database_config_1 = require("./config/database.config");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -34,9 +33,72 @@ exports.AppModule = AppModule = __decorate([
                 isGlobal: true,
                 envFilePath: '.env',
             }),
-            typeorm_1.TypeOrmModule.forRoot({
-                ...database_config_1.databaseConfig,
-                autoLoadEntities: true,
+            typeorm_1.TypeOrmModule.forRootAsync({
+                imports: [config_1.ConfigModule],
+                inject: [config_1.ConfigService],
+                useFactory: (configService) => {
+                    const isProduction = configService.get('NODE_ENV') === 'production';
+                    const databaseUrl = configService.get('DATABASE_URL');
+                    let config;
+                    if (databaseUrl) {
+                        // Usar DATABASE_URL si está disponible (formato de Railway)
+                        try {
+                            const url = new URL(databaseUrl);
+                            config = {
+                                type: 'postgres',
+                                host: url.hostname,
+                                port: parseInt(url.port || '5432'),
+                                username: decodeURIComponent(url.username),
+                                password: decodeURIComponent(url.password),
+                                database: url.pathname.slice(1),
+                                autoLoadEntities: true,
+                                migrations: [],
+                                migrationsRun: false,
+                                synchronize: false,
+                                logging: !isProduction,
+                                ssl: isProduction ? { rejectUnauthorized: false } : false,
+                            };
+                            console.log(`✅ Database config from DATABASE_URL:`);
+                            console.log(`   Host: ${url.hostname}`);
+                            console.log(`   Port: ${url.port || '5432'}`);
+                            console.log(`   Database: ${url.pathname.slice(1)}`);
+                            console.log(`   User: ${url.username}`);
+                            console.log(`   SSL: ${isProduction ? 'enabled' : 'disabled'}`);
+                        }
+                        catch (error) {
+                            console.error('❌ Error parsing DATABASE_URL:', error);
+                            throw new Error('Invalid DATABASE_URL format');
+                        }
+                    }
+                    else {
+                        // Usar variables individuales (desarrollo local)
+                        const host = configService.get('DATABASE_HOST') || 'localhost';
+                        const port = parseInt(configService.get('DATABASE_PORT') || '5432');
+                        const username = configService.get('DATABASE_USER') || 'postgres';
+                        const password = configService.get('DATABASE_PASSWORD') || 'postgres';
+                        const database = configService.get('DATABASE_NAME') || 'tiketea_online';
+                        config = {
+                            type: 'postgres',
+                            host,
+                            port,
+                            username,
+                            password,
+                            database,
+                            autoLoadEntities: true,
+                            migrations: [],
+                            migrationsRun: false,
+                            synchronize: false,
+                            logging: !isProduction,
+                        };
+                        console.log(`⚠️  Using individual database variables (DATABASE_URL not found):`);
+                        console.log(`   Host: ${host}`);
+                        console.log(`   Port: ${port}`);
+                        console.log(`   Database: ${database}`);
+                        console.log(`   User: ${username}`);
+                        console.log(`   ⚠️  Make sure PostgreSQL is running locally or configure DATABASE_URL for Railway`);
+                    }
+                    return config;
+                },
             }),
             auth_module_1.AuthModule,
             users_module_1.UsersModule,

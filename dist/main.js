@@ -11,8 +11,23 @@ async function bootstrap() {
         prefix: '/uploads',
     });
     // Habilitar CORS con configuración segura
+    // Soporta múltiples orígenes separados por coma
+    const allowedOrigins = process.env.CORS_ORIGIN
+        ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+        : ['http://localhost:3000'];
     app.enableCors({
-        origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+        origin: (origin, callback) => {
+            // Permitir requests sin origin (como Postman, mobile apps, etc.)
+            if (!origin)
+                return callback(null, true);
+            // Verificar si el origin está en la lista permitida
+            if (allowedOrigins.includes(origin)) {
+                callback(null, true);
+            }
+            else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
         allowedHeaders: ['Content-Type', 'Authorization'],
@@ -21,7 +36,7 @@ async function bootstrap() {
     // Validación global con opciones de seguridad
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true, // Remover propiedades no definidas
-        forbidNonWhitelisted: true, // Rechazar propiedades no definidas
+        forbidNonWhitelisted: false, // No rechazar propiedades no definidas (se validan manualmente en los controladores)
         transform: true, // Transformar payloads a instancias de DTO
         transformOptions: {
             enableImplicitConversion: true,
@@ -42,7 +57,7 @@ async function bootstrap() {
     await app.listen(port);
     console.log(`✅ Application is running on port ${port} (${nodeEnv})`);
     console.log(`🔒 Security headers enabled`);
-    console.log(`🛡️  CORS configured for: ${process.env.CORS_ORIGIN}`);
+    console.log(`🛡️  CORS configured for: ${allowedOrigins.join(', ')}`);
 }
 bootstrap().catch((error) => {
     console.error('❌ Failed to start application:', error);

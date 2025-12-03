@@ -1,2 +1,3 @@
 import { DataSourceOptions } from 'typeorm';
-export declare const databaseConfig: DataSourceOptions;
+declare let databaseConfig: DataSourceOptions;
+export { databaseConfig };
