@@ -7,7 +7,8 @@ COPY package*.json ./
 
 # Instalar dependencias
 # Usar npm install si no hay package-lock.json, npm ci si existe
-RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
+# --legacy-peer-deps para resolver conflictos de versiones entre dependencias
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev --legacy-peer-deps; else npm install --omit=dev --legacy-peer-deps; fi
 
 # Copiar código fuente
 COPY dist ./dist
