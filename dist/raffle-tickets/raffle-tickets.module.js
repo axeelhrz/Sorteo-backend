@@ -1,0 +1,33 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.RaffleTicketsModule = void 0;
+const common_1 = require("@nestjs/common");
+const typeorm_1 = require("@nestjs/typeorm");
+const raffle_ticket_entity_1 = require("./raffle-ticket.entity");
+const raffle_tickets_service_1 = require("./raffle-tickets.service");
+const raffle_tickets_controller_1 = require("./raffle-tickets.controller");
+const raffle_entity_1 = require("../raffles/raffle.entity");
+const user_entity_1 = require("../users/user.entity");
+const raffles_module_1 = require("../raffles/raffles.module");
+const notification_module_1 = require("../notifications/notification.module");
+let RaffleTicketsModule = class RaffleTicketsModule {
+};
+exports.RaffleTicketsModule = RaffleTicketsModule;
+exports.RaffleTicketsModule = RaffleTicketsModule = __decorate([
+    (0, common_1.Module)({
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([raffle_ticket_entity_1.RaffleTicket, raffle_entity_1.Raffle, user_entity_1.User]),
+            (0, common_1.forwardRef)(() => raffles_module_1.RafflesModule),
+            notification_module_1.NotificationModule,
+        ],
+        providers: [raffle_tickets_service_1.RaffleTicketsService],
+        controllers: [raffle_tickets_controller_1.RaffleTicketsController],
+        exports: [raffle_tickets_service_1.RaffleTicketsService],
+    })
+], RaffleTicketsModule);
