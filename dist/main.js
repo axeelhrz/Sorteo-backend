@@ -19,7 +19,10 @@ async function bootstrap() {
     app.use((req, res, next) => {
         if (req.method === 'OPTIONS') {
             const origin = req.headers.origin;
+            console.log(`🔍 OPTIONS request from origin: ${origin}`);
+            console.log(`   Allowed origins: ${allowedOrigins.join(', ')}`);
             if (origin && allowedOrigins.includes(origin)) {
+                console.log(`✅ Allowing OPTIONS request from: ${origin}`);
                 res.setHeader('Access-Control-Allow-Origin', origin);
                 res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
                 res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
@@ -30,11 +33,13 @@ async function bootstrap() {
             }
             else if (!origin) {
                 // Permitir requests sin origin
+                console.log(`✅ Allowing OPTIONS request without origin`);
                 res.status(204).end();
                 return;
             }
             else {
                 console.warn(`⚠️  CORS preflight blocked origin: ${origin}`);
+                console.warn(`   Allowed origins: ${allowedOrigins.join(', ')}`);
                 res.status(403).end();
                 return;
             }
@@ -42,13 +47,17 @@ async function bootstrap() {
         next();
     });
     // IMPORTANTE: CORS debe estar ANTES de otros middlewares
+    // Usar configuración simple que maneje todos los casos
     app.enableCors({
         origin: (origin, callback) => {
             // Permitir requests sin origin (como Postman, mobile apps, etc.)
-            if (!origin)
+            if (!origin) {
+                console.log(`✅ Allowing request without origin`);
                 return callback(null, true);
+            }
             // Verificar si el origin está en la lista permitida
             if (allowedOrigins.includes(origin)) {
+                console.log(`✅ Allowing request from origin: ${origin}`);
                 callback(null, true);
             }
             else {
