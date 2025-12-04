@@ -34,9 +34,12 @@ import { UploadsModule } from './uploads/uploads.module';
           // Usar DATABASE_URL si está disponible (formato de Railway)
           try {
             const url = new URL(databaseUrl);
+            // Si el hostname es 'localhost', usar 127.0.0.1 para forzar IPv4
+            const dbHost = url.hostname === 'localhost' ? '127.0.0.1' : url.hostname;
+            
             config = {
               type: 'postgres',
-              host: url.hostname,
+              host: dbHost,
               port: parseInt(url.port || '5432'),
               username: decodeURIComponent(url.username),
               password: decodeURIComponent(url.password),
@@ -47,6 +50,11 @@ import { UploadsModule } from './uploads/uploads.module';
               synchronize: false,
               logging: !isProduction,
               ssl: isProduction ? { rejectUnauthorized: false } : false,
+              extra: {
+                max: 10, // máximo de conexiones en el pool
+                connectionTimeoutMillis: 10000,
+                idleTimeoutMillis: 30000,
+              },
             };
             console.log(`✅ Database config from DATABASE_URL:`);
             console.log(`   Host: ${url.hostname}`);
@@ -60,7 +68,8 @@ import { UploadsModule } from './uploads/uploads.module';
           }
         } else {
           // Usar variables individuales (desarrollo local)
-          const host = configService.get<string>('DATABASE_HOST') || 'localhost';
+          // Forzar IPv4 usando 127.0.0.1 en lugar de localhost para evitar problemas con IPv6
+          const host = configService.get<string>('DATABASE_HOST') || '127.0.0.1';
           const port = parseInt(configService.get<string>('DATABASE_PORT') || '5432');
           const username = configService.get<string>('DATABASE_USER') || 'postgres';
           const password = configService.get<string>('DATABASE_PASSWORD') || 'postgres';
@@ -78,6 +87,11 @@ import { UploadsModule } from './uploads/uploads.module';
             migrationsRun: false,
             synchronize: false,
             logging: !isProduction,
+            extra: {
+              max: 10, // máximo de conexiones en el pool
+              connectionTimeoutMillis: 10000,
+              idleTimeoutMillis: 30000,
+            },
           };
           
           console.log(`⚠️  Using individual database variables (DATABASE_URL not found):`);
