@@ -18,6 +18,33 @@ async function bootstrap() {
     ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
     : ['http://localhost:3000'];
   
+  // Manejar peticiones OPTIONS (preflight) explícitamente ANTES de habilitar CORS
+  app.use((req: any, res: any, next: any) => {
+    if (req.method === 'OPTIONS') {
+      const origin = req.headers.origin;
+      
+      if (origin && allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Max-Age', '3600');
+        res.status(204).end();
+        return;
+      } else if (!origin) {
+        // Permitir requests sin origin
+        res.status(204).end();
+        return;
+      } else {
+        console.warn(`⚠️  CORS preflight blocked origin: ${origin}`);
+        res.status(403).end();
+        return;
+      }
+    }
+    next();
+  });
+  
+  // IMPORTANTE: CORS debe estar ANTES de otros middlewares
   app.enableCors({
     origin: (origin, callback) => {
       // Permitir requests sin origin (como Postman, mobile apps, etc.)
@@ -27,13 +54,18 @@ async function bootstrap() {
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.warn(`⚠️  CORS blocked origin: ${origin}`);
+        console.warn(`   Allowed origins: ${allowedOrigins.join(', ')}`);
         callback(new Error('Not allowed by CORS'));
       }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
     maxAge: 3600,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   // Validación global con opciones de seguridad
@@ -49,7 +81,14 @@ async function bootstrap() {
   );
 
   // Agregar headers de seguridad manualmente
+  // IMPORTANTE: Este middleware debe ejecutarse DESPUÉS de CORS
+  // y NO debe interferir con las peticiones OPTIONS
   app.use((_req: any, res: any, next: any) => {
+    // No aplicar headers de seguridad a peticiones OPTIONS (preflight)
+    if (_req.method === 'OPTIONS') {
+      return next();
+    }
+    
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
