@@ -37,15 +37,18 @@ exports.AppModule = AppModule = __decorate([
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],
                 useFactory: (configService) => {
-                    const isProduction = configService.get('NODE_ENV') === 'production';
+                    // Detectar si estamos en Railway (Railway siempre tiene RAILWAY_ENVIRONMENT)
+                    const isRailway = !!configService.get('RAILWAY_ENVIRONMENT');
+                    const isProduction = configService.get('NODE_ENV') === 'production' || isRailway;
                     const databaseUrl = configService.get('DATABASE_URL');
                     let config;
                     if (databaseUrl) {
                         // Usar DATABASE_URL si está disponible (formato de Railway)
                         try {
                             const url = new URL(databaseUrl);
-                            // Si el hostname es 'localhost', usar 127.0.0.1 para forzar IPv4
-                            const dbHost = url.hostname === 'localhost' ? '127.0.0.1' : url.hostname;
+                            // Solo convertir localhost a 127.0.0.1 si NO estamos en producción (Railway)
+                            // En Railway, DATABASE_URL apunta al servicio PostgreSQL correcto, no a localhost
+                            const dbHost = (!isProduction && url.hostname === 'localhost') ? '127.0.0.1' : url.hostname;
                             config = {
                                 type: 'postgres',
                                 host: dbHost,
@@ -66,11 +69,19 @@ exports.AppModule = AppModule = __decorate([
                                 },
                             };
                             console.log(`✅ Database config from DATABASE_URL:`);
-                            console.log(`   Host: ${url.hostname}`);
+                            console.log(`   Host: ${dbHost} (original: ${url.hostname})`);
                             console.log(`   Port: ${url.port || '5432'}`);
                             console.log(`   Database: ${url.pathname.slice(1)}`);
                             console.log(`   User: ${url.username}`);
                             console.log(`   SSL: ${isProduction ? 'enabled' : 'disabled'}`);
+                            console.log(`   Environment: ${isRailway ? 'Railway' : isProduction ? 'production' : 'development (local)'}`);
+                            // Advertencia si estamos en Railway y el host es localhost
+                            if (isRailway && url.hostname === 'localhost') {
+                                console.error('⚠️  ERROR: DATABASE_URL has localhost in Railway!');
+                                console.error('   Railway should provide a DATABASE_URL with a remote hostname.');
+                                console.error('   Please check your Railway PostgreSQL service configuration.');
+                                console.error('   The DATABASE_URL should look like: postgresql://user:pass@containers-us-west-xxx.railway.app:5432/railway');
+                            }
                         }
                         catch (error) {
                             console.error('❌ Error parsing DATABASE_URL:', error);
