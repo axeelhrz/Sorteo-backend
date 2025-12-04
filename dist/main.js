@@ -4,6 +4,7 @@ const core_1 = require("@nestjs/core");
 const common_1 = require("@nestjs/common");
 const app_module_1 = require("./app.module");
 const path_1 = require("path");
+const cors_interceptor_1 = require("./common/interceptors/cors.interceptor");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     // Servir archivos estáticos desde la carpeta uploads
@@ -74,6 +75,8 @@ async function bootstrap() {
         preflightContinue: false,
         optionsSuccessStatus: 204,
     });
+    // Interceptor global para CORS (como respaldo)
+    app.useGlobalInterceptors(new cors_interceptor_1.CorsInterceptor());
     // Validación global con opciones de seguridad
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true, // Remover propiedades no definidas

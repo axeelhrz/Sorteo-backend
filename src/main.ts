@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { CorsInterceptor } from './common/interceptors/cors.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -77,6 +78,9 @@ async function bootstrap() {
     preflightContinue: false,
     optionsSuccessStatus: 204,
   });
+
+  // Interceptor global para CORS (como respaldo)
+  app.useGlobalInterceptors(new CorsInterceptor());
 
   // Validación global con opciones de seguridad
   app.useGlobalPipes(
